@@ -29,13 +29,6 @@ CATEGORY_RULES: List[tuple[str, List[str]]] = [
     ("AI/ML", ["machine learning", r"\bml\b", "deep learning", r"\bllm\b", "nlp", "computer vision", r"\bcv\b", "gen ai", "generative", "transformer", "diffusion", r"\bai\b"]),
     ("Hardware/Robotics", ["hardware", "firmware", "embedded", r"\biot\b", "robot", "robotics", "fpga", "pcb", "sensor", "mechatronics", "autonomous", "drone"]),
     ("Security", ["security", "infosec", "secops", r"\bsoc\b", "threat", "vulnerability", "pentest", "penetration", "zero trust", r"\biam\b"]),
-    ("Cryptography", [
-        r"\bcryptography\b", r"\bcrypto(graphy|analysis)\b", r"\bencryption\b",
-        r"\bcipher(s)?\b", r"\bzero-knowledge\b", r"\bzk\b", r"\bsnark(s)?\b",
-        r"\bstark(s)?\b", r"\bmpc\b", r"\bhomomorphic\b", r"\bhashing\b",
-        r"\bpost-quantum\b", r"\blattice\b", r"\bkey management\b",
-        r"\bsecure computation\b"
-    ]),
     ("Fintech", ["fintech", "payments", "payment", "card", "banking", "lending", "mortgage", "insurtech", "trading", "brokerage"]),
     ("Health/Biotech", ["health", "healthcare", "medtech", "biotech", "clinical", "pharma", "genomics", "lab"]),
     ("Climate/Energy", ["climate", "energy", "renewable", "solar", "wind", "battery", "grid", "carbon", "sustainability"]),
@@ -45,7 +38,11 @@ CATEGORY_RULES: List[tuple[str, List[str]]] = [
     ("Devtools/Infra", ["devops", r"\bsre\b", "platform", "kubernetes", r"\bk8s\b", "cloud", r"\baws\b", r"\bgcp\b", r"\bazure\b", "infra", "observability", "ci/cd", "terraform"]),
 ]
 CATEGORY_ORDER = [name for name, _ in CATEGORY_RULES] + ["Other"]
-CATEGORY_CACHE_VERSION = 3
+CATEGORY_CACHE_VERSION = 4
+SUPPORTED_CATEGORY_CACHE_VERSIONS = {3, CATEGORY_CACHE_VERSION}
+LEGACY_CATEGORY_ALIASES = {
+    "Cryptography": "Other",
+}
 
 
 def fetch_page(
@@ -124,6 +121,58 @@ def classify_comment(text: str, rules: List[tuple[str, List[re.Pattern[str]]]]) 
             if pattern.search(cleaned):
                 return name
     return "Other"
+
+
+def normalize_category_counts(counts: Dict[str, Any]) -> Dict[str, Any]:
+    normalized: Dict[str, Any] = {name: 0 for name in CATEGORY_ORDER}
+    for category, value in (counts or {}).items():
+        target = LEGACY_CATEGORY_ALIASES.get(category, category)
+        if target not in normalized:
+            target = "Other"
+        normalized[target] += value
+    return normalized
+
+
+def category_order_for_latest_share(rows: List[Dict[str, Any]]) -> List[str]:
+    latest_categories: Dict[str, Any] = {}
+    for row in reversed(rows):
+        categories = row.get("categories")
+        if categories:
+            latest_categories = normalize_category_counts(categories)
+            break
+    if not latest_categories:
+        return list(CATEGORY_ORDER)
+
+    base_index = {category: index for index, category in enumerate(CATEGORY_ORDER)}
+    ordered = [category for category in CATEGORY_ORDER if category != "Other"]
+    ordered.sort(
+        key=lambda category: (-latest_categories.get(category, 0), base_index[category])
+    )
+    if "Other" in CATEGORY_ORDER:
+        ordered.append("Other")
+    return ordered
+
+
+def normalize_category_cache(category_cache: Dict[str, Any]) -> bool:
+    changed = False
+    for story_id, entry in list(category_cache.items()):
+        if story_id == "_meta" or not isinstance(entry, dict):
+            continue
+        counts = entry.get("counts")
+        if not isinstance(counts, dict):
+            continue
+        normalized = normalize_category_counts(counts)
+        if normalized != counts:
+            entry["counts"] = normalized
+            changed = True
+    meta = category_cache.get("_meta")
+    if not isinstance(meta, dict) or meta.get("version") != CATEGORY_CACHE_VERSION:
+        category_cache["_meta"] = {
+            "version": CATEGORY_CACHE_VERSION,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        changed = True
+    return changed
 
 
 def month_bounds(month: str) -> tuple[int, int]:
@@ -360,14 +409,20 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
             "comments": r["comments"],
             "hn_total_comments": r.get("hn_total_comments"),
             "comments_per_10k": r.get("comments_per_10k"),
-            "categories": r.get("categories"),
-            "categories_per_10k": r.get("categories_per_10k"),
+            "categories": normalize_category_counts(r.get("categories") or {})
+            if r.get("categories")
+            else None,
+            "categories_per_10k": normalize_category_counts(
+                r.get("categories_per_10k") or {}
+            )
+            if r.get("categories_per_10k")
+            else None,
         }
         for r in rows
     ]
     data_json = json.dumps(data)
     categories_json = json.dumps(
-        CATEGORY_ORDER if any(r.get("categories") for r in rows) else []
+        category_order_for_latest_share(rows) if any(r.get("categories") for r in rows) else []
     )
     rules_html = "\n".join(
         f"<li><strong>{html.escape(name)}</strong>: "
@@ -641,7 +696,7 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
     <p><strong>HN comments</strong> are all comments across Hacker News in that month (any post), estimated via the HN Algolia Search API.</p>
     <p><strong>Normalize</strong> means: <em>WIH comments ÷ total HN comments</em>, shown as “comments per 10k HN comments” to make month‑to‑month comparisons fairer.</p>
     <p><strong>Categories</strong> are assigned by keyword matching on each job comment. Each comment is assigned to the first matching bucket, otherwise “Other.”</p>
-    <p><strong>Crypto/Web3</strong> and <strong>Cryptography</strong> are separate buckets to avoid mixing cryptocurrencies with security/crypto research.</p>
+    <p><strong>Other</strong> includes comments that do not match a named category, including cryptography-specific terms.</p>
     <ul>
       <li>We select one “Who is hiring?” post per month (highest comment count if duplicates).</li>
       <li>We drop the first and last months to avoid partial months.</li>
@@ -1243,17 +1298,23 @@ def main() -> None:
                 r["comments_per_10k"] = None
     if rows and not args.no_categories:
         category_cache: Dict[str, Any] = {}
+        category_cache_changed = False
         if args.category_cache and os.path.exists(args.category_cache) and not args.refresh:
             with open(args.category_cache, "r", encoding="utf-8") as f:
                 category_cache = json.load(f)
             meta = category_cache.get("_meta") if isinstance(category_cache, dict) else None
-            if not meta or meta.get("version") != CATEGORY_CACHE_VERSION:
+            if not meta or meta.get("version") not in SUPPORTED_CATEGORY_CACHE_VERSIONS:
                 category_cache = {}
+            else:
+                category_cache_changed = normalize_category_cache(category_cache)
         rules = compile_category_rules()
         for r in rows:
             story_id = str(r["object_id"])
             if story_id in category_cache and not args.refresh:
-                counts = category_cache[story_id]["counts"]
+                counts = normalize_category_counts(category_cache[story_id]["counts"])
+                if counts != category_cache[story_id]["counts"]:
+                    category_cache[story_id]["counts"] = counts
+                    category_cache_changed = True
                 if sum(counts.values()) == 0:
                     counts = None
             else:
@@ -1267,10 +1328,12 @@ def main() -> None:
                     hits_per_page=args.category_hits_per_page,
                     rules=rules,
                 )
+                counts = normalize_category_counts(counts)
                 category_cache[story_id] = {
                     "counts": counts,
                     "fetched_at": datetime.now(timezone.utc).isoformat(),
                 }
+                category_cache_changed = True
                 if args.category_cache:
                     category_cache["_meta"] = {
                         "version": CATEGORY_CACHE_VERSION,
@@ -1288,6 +1351,13 @@ def main() -> None:
                 r["categories_per_10k"] = per_10k
             else:
                 r["categories_per_10k"] = None
+        if args.category_cache and category_cache_changed:
+            category_cache["_meta"] = {
+                "version": CATEGORY_CACHE_VERSION,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            with open(args.category_cache, "w", encoding="utf-8") as f:
+                json.dump(category_cache, f)
     write_csv(rows, args.out_csv)
     if rows and not args.no_categories:
         write_category_csv(rows, args.out_category_csv, normalized=False)
