@@ -6,76 +6,147 @@
   <title>HN Who Is Hiring? Comments</title>
   <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
   <style>
+    :root {
+      color-scheme: light;
+      --bg: oklch(0.975 0.008 96);
+      --surface: oklch(0.995 0.005 96);
+      --surface-raised: oklch(0.985 0.008 96);
+      --text: oklch(0.24 0.025 255);
+      --muted: oklch(0.48 0.028 255);
+      --line: oklch(0.88 0.018 92);
+      --line-strong: oklch(0.78 0.025 92);
+      --accent: oklch(0.56 0.16 252);
+      --accent-soft: oklch(0.94 0.035 252);
+      --focus: oklch(0.68 0.16 252);
+      --shadow: 0 18px 48px rgba(51, 43, 31, 0.10);
+      --control-shadow: 0 1px 2px rgba(51, 43, 31, 0.08);
+    }
     html, body {
       height: 100%;
     }
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       margin: 0;
-      color: #0f172a;
-      background: #f8fafc;
+      color: var(--text);
+      background: var(--bg);
+      letter-spacing: 0;
     }
-    h1 { margin-bottom: 8px; }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: 0;
+      font-weight: 720;
+    }
     .page {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      padding: 24px;
+      padding: 28px;
       box-sizing: border-box;
-      gap: 12px;
+      gap: 16px;
     }
     .header {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
+      gap: 18px;
     }
     .title-block {
-      flex: 1 1 auto;
       min-width: 240px;
     }
-    .controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin: 4px 0 8px;
+    .meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
     }
-    .controls button {
-      border: 1px solid #cbd5f5;
-      background: #ffffff;
-      color: #0f172a;
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .tab-bar {
+    .toolbar {
       display: flex;
-      gap: 8px;
       align-items: center;
-      margin: 4px 0 8px;
+      justify-content: flex-end;
+      gap: 8px;
       flex-wrap: wrap;
     }
-    .tab-button {
-      border: 1px solid #cbd5f5;
-      background: #ffffff;
-      color: #0f172a;
-      padding: 6px 12px;
+    button {
+      font: inherit;
+      letter-spacing: 0;
+    }
+    .mode-button,
+    .theme-toggle {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      padding: 0 12px;
       border-radius: 8px;
       cursor: pointer;
+      font-size: 13px;
+      font-weight: 620;
+      box-shadow: var(--control-shadow);
+      transition: background-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .mode-button:hover,
+    .theme-toggle:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-raised);
+    }
+    .mode-button:active,
+    .theme-toggle:active,
+    .tab-button:active {
+      transform: scale(0.98);
+    }
+    .mode-button:focus-visible,
+    .theme-toggle:focus-visible,
+    .tab-button:focus-visible,
+    .methodology summary:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .tab-bar {
+      display: inline-flex;
+      gap: 2px;
+      align-items: center;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-raised);
+    }
+    .tab-button {
+      min-height: 28px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 0 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 620;
+      transition: background-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .tab-button:hover {
+      color: var(--text);
     }
     .tab-button.active {
-      border-color: #2563eb;
-      color: #1d4ed8;
-      box-shadow: inset 0 0 0 1px #2563eb;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--control-shadow);
     }
     .chart-panel {
       flex: 1 1 auto;
-      min-height: 70vh;
-      background: #ffffff;
-      border-radius: 14px;
-      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
-      padding: 8px;
+      min-height: 72vh;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 10px;
+      overflow: hidden;
     }
     .chart-panel.hidden {
       display: none;
@@ -83,78 +154,74 @@
     #chart {
       width: 100%;
       height: 100%;
-      background: #ffffff;
+      background: transparent;
     }
     #categoryChart {
       width: 100%;
       height: 100%;
-      background: #ffffff;
+      background: transparent;
     }
-    .meta { color: #475569; }
     .theme-toggle {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      border: 1px solid #cbd5f5;
-      background: #ffffff;
-      color: #0f172a;
-      padding: 6px 10px;
-      border-radius: 999px;
-      cursor: pointer;
     }
     .theme-toggle svg { width: 16px; height: 16px; }
     .methodology {
-      margin-top: 16px;
-      background: #ffffff;
-      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
       padding: 14px 16px;
-      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
     }
     .methodology summary {
       cursor: pointer;
       font-weight: 600;
-      color: #0f172a;
+      color: var(--text);
     }
     .methodology p, .methodology li {
-      color: #334155;
+      color: var(--muted);
       line-height: 1.5;
+      max-width: 78ch;
+    }
+    .methodology code {
+      color: var(--text);
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 4px;
     }
     body[data-theme="dark"] {
-      background: #0b1220;
-      color: #e2e8f0;
+      color-scheme: dark;
+      --bg: oklch(0.18 0.02 258);
+      --surface: oklch(0.235 0.02 258);
+      --surface-raised: oklch(0.28 0.02 258);
+      --text: oklch(0.92 0.012 258);
+      --muted: oklch(0.72 0.02 258);
+      --line: oklch(0.38 0.028 258);
+      --line-strong: oklch(0.50 0.035 258);
+      --accent: oklch(0.74 0.12 220);
+      --accent-soft: oklch(0.31 0.045 220);
+      --focus: oklch(0.76 0.13 220);
+      --shadow: 0 20px 56px rgba(4, 10, 24, 0.42);
+      --control-shadow: 0 1px 1px rgba(4, 10, 24, 0.32);
     }
-    body[data-theme="dark"] .meta { color: #94a3b8; }
-    body[data-theme="dark"] .controls button {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-color: #1e293b;
+    @media (max-width: 760px) {
+      .page {
+        padding: 16px;
+        gap: 12px;
+      }
+      .header {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+      .toolbar {
+        justify-content: flex-start;
+      }
+      .chart-panel {
+        min-height: 66vh;
+        padding: 6px;
+      }
     }
-    body[data-theme="dark"] .tab-button {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-color: #1e293b;
-    }
-    body[data-theme="dark"] .tab-button.active {
-      border-color: #38bdf8;
-      color: #7dd3fc;
-      box-shadow: inset 0 0 0 1px #38bdf8;
-    }
-    body[data-theme="dark"] .chart-panel {
-      background: #0b1220;
-      box-shadow: 0 8px 30px rgba(2, 6, 23, 0.6);
-    }
-    body[data-theme="dark"] .theme-toggle {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-color: #1e293b;
-    }
-    body[data-theme="dark"] .methodology {
-      background: #0f172a;
-      box-shadow: 0 8px 30px rgba(2, 6, 23, 0.6);
-    }
-    body[data-theme="dark"] .methodology summary { color: #e2e8f0; }
-    body[data-theme="dark"] .methodology p,
-    body[data-theme="dark"] .methodology li { color: #cbd5f5; }
   </style>
 </head>
 <body>
@@ -162,28 +229,28 @@
   <div class="header">
     <div class="title-block">
       <h1>HN: Who is hiring? comments per month</h1>
-      <p class="meta">Data fetched from HN Algolia API on 2026-06-21 10:18:45 (UTC).</p>
+      <p class="meta">Data fetched from HN Algolia API on 2026-06-21 10:36:17 (UTC).</p>
     </div>
-    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
-      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-        <path d="M12 3a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Z"/>
-        <path d="M12 17a5 5 0 1 0 0-10a5 5 0 0 0 0 10Z"/>
-        <path d="M4.22 4.22a1 1 0 0 1 1.42 0l1.06 1.06a1 1 0 0 1-1.42 1.42L4.22 5.64a1 1 0 0 1 0-1.42Z"/>
-        <path d="M18.36 18.36a1 1 0 0 1 1.42 0l1.06 1.06a1 1 0 1 1-1.42 1.42l-1.06-1.06a1 1 0 0 1 0-1.42Z"/>
-        <path d="M3 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Z"/>
-        <path d="M17.5 12a1 1 0 0 1 1-1H20a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1Z"/>
-        <path d="M4.22 19.78a1 1 0 0 1 0-1.42l1.06-1.06a1 1 0 1 1 1.42 1.42l-1.06 1.06a1 1 0 0 1-1.42 0Z"/>
-        <path d="M18.36 5.64a1 1 0 0 1 0-1.42l1.06-1.06a1 1 0 1 1 1.42 1.42l-1.06 1.06a1 1 0 0 1-1.42 0Z"/>
-      </svg>
-      <span id="themeLabel">Light</span>
-    </button>
-  </div>
-  <div class="controls">
-    <button id="modeToggle" type="button">Normalize</button>
-  </div>
-  <div class="tab-bar">
-    <button class="tab-button active" data-tab="main">WIH comments</button>
-    <button class="tab-button" data-tab="categories">Category share</button>
+    <div class="toolbar" aria-label="Chart controls">
+      <div class="tab-bar" role="tablist" aria-label="Chart view">
+        <button class="tab-button active" data-tab="main" type="button">WIH comments</button>
+        <button class="tab-button" data-tab="categories" type="button">Category share</button>
+      </div>
+      <button id="modeToggle" class="mode-button" type="button">Normalize</button>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 3a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Z"/>
+          <path d="M12 17a5 5 0 1 0 0-10a5 5 0 0 0 0 10Z"/>
+          <path d="M4.22 4.22a1 1 0 0 1 1.42 0l1.06 1.06a1 1 0 0 1-1.42 1.42L4.22 5.64a1 1 0 0 1 0-1.42Z"/>
+          <path d="M18.36 18.36a1 1 0 0 1 1.42 0l1.06 1.06a1 1 0 1 1-1.42 1.42l-1.06-1.06a1 1 0 0 1 0-1.42Z"/>
+          <path d="M3 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Z"/>
+          <path d="M17.5 12a1 1 0 0 1 1-1H20a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1Z"/>
+          <path d="M4.22 19.78a1 1 0 0 1 0-1.42l1.06-1.06a1 1 0 1 1 1.42 1.42l-1.06 1.06a1 1 0 0 1-1.42 0Z"/>
+          <path d="M18.36 5.64a1 1 0 0 1 0-1.42l1.06-1.06a1 1 0 1 1 1.42 1.42l-1.06 1.06a1 1 0 0 1-1.42 0Z"/>
+        </svg>
+        <span id="themeLabel">Light</span>
+      </button>
+    </div>
   </div>
   <div class="chart-panel" id="mainPanel">
     <div id="chart"></div>
@@ -233,42 +300,125 @@
     const hnTotals = data.map(d => d.hn_total_comments ?? null);
     const normCustom = data.map(d => [d.comments ?? null, d.hn_total_comments ?? null]);
     const categoryColors = [
-      "#f97316", "#0ea5e9", "#22c55e", "#ef4444", "#6366f1",
-      "#14b8a6", "#eab308", "#ec4899", "#8b5cf6", "#10b981",
-      "#a855f7", "#64748b"
+      "#2563eb", "#0891b2", "#16a34a", "#dc2626", "#7c3aed",
+      "#0f766e", "#ca8a04", "#db2777", "#9333ea", "#059669",
+      "#475569", "#78716c"
     ];
 
+    const plotTokens = {
+      light: {
+        axis: "#b9b0a3",
+        grid: "#e8e1d6",
+        hoverBg: "#fbfaf7",
+        hoverBorder: "#d7cec0",
+        line: "#2563eb",
+        marker: "#1d4ed8",
+        markerStroke: "#fbfaf7",
+        muted: "#6b6258",
+        plotBg: "#fbfaf7",
+        rangeBg: "#f3eee7",
+        text: "#27231f",
+        trend: "#a16207",
+        yearLine: "#ded6ca"
+      },
+      dark: {
+        axis: "#596679",
+        grid: "#354256",
+        hoverBg: "#202a39",
+        hoverBorder: "#4c5a70",
+        line: "#38bdf8",
+        marker: "#7dd3fc",
+        markerStroke: "#202a39",
+        muted: "#a7b1c2",
+        plotBg: "#202a39",
+        rangeBg: "#273244",
+        text: "#edf2f7",
+        trend: "#facc15",
+        yearLine: "#313d50"
+      }
+    };
+
+    function getPlotTokens(theme) {
+      return plotTokens[theme] || plotTokens.light;
+    }
+
     const baseLayout = {
-      margin: { t: 30, r: 30, l: 60, b: 80 },
-      xaxis: {
-        type: "date",
-        tickformat: "%Y-%m",
-        tickangle: -45,
-        dtick: "M3",
-        showgrid: true,
-        gridcolor: "#e2e8f0",
-        rangeslider: { visible: true, thickness: 0.08 }
-      },
-      yaxis: {
-        title: "Comments",
-        gridcolor: "#e2e8f0"
-      },
-      hovermode: "x unified"
+      margin: { t: 18, r: 24, l: 68, b: 54 },
+      hovermode: "x unified",
+      legend: { orientation: "h", x: 0, y: 1.1, xanchor: "left" }
     };
 
     const lightTheme = {
-      paper_bgcolor: "#f8fafc",
-      plot_bgcolor: "#ffffff",
-      font: { color: "#0f172a" },
-      yaxis: { gridcolor: "#e2e8f0" }
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: plotTokens.light.plotBg,
+      font: {
+        color: plotTokens.light.text,
+        family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+        size: 12
+      },
+      hoverlabel: {
+        bgcolor: plotTokens.light.hoverBg,
+        bordercolor: plotTokens.light.hoverBorder,
+        font: { color: plotTokens.light.text }
+      }
     };
     const darkTheme = {
-      paper_bgcolor: "#0b1220",
-      plot_bgcolor: "#0f172a",
-      font: { color: "#e2e8f0" },
-      xaxis: { gridcolor: "#1e293b" },
-      yaxis: { gridcolor: "#1e293b" }
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: plotTokens.dark.plotBg,
+      font: {
+        color: plotTokens.dark.text,
+        family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+        size: 12
+      },
+      hoverlabel: {
+        bgcolor: plotTokens.dark.hoverBg,
+        bordercolor: plotTokens.dark.hoverBorder,
+        font: { color: plotTokens.dark.text }
+      }
     };
+
+    function buildXAxis(theme, width) {
+      const tokens = getPlotTokens(theme);
+      const compact = width < 760;
+      return {
+        type: "date",
+        tickformat: "%Y",
+        tickangle: 0,
+        dtick: compact ? "M24" : "M12",
+        showgrid: false,
+        showline: true,
+        linecolor: tokens.axis,
+        ticks: "outside",
+        ticklen: 6,
+        tickcolor: tokens.axis,
+        tickfont: { color: tokens.muted, size: compact ? 11 : 12 },
+        automargin: true,
+        rangeslider: {
+          visible: true,
+          thickness: compact ? 0.065 : 0.055,
+          bgcolor: tokens.rangeBg,
+          bordercolor: tokens.axis,
+          borderwidth: 1
+        }
+      };
+    }
+
+    function buildYAxis(theme, title, tickformat, range) {
+      const tokens = getPlotTokens(theme);
+      const axis = {
+        title: { text: title, standoff: 14 },
+        tickformat,
+        gridcolor: tokens.grid,
+        zeroline: false,
+        automargin: true,
+        rangemode: "tozero"
+      };
+      if (range) {
+        axis.range = range;
+        delete axis.rangemode;
+      }
+      return axis;
+    }
 
     function computeStats(values) {
       const valid = values
@@ -300,12 +450,11 @@
 
     function formatValue(value, mode) {
       if (value === null || value === undefined) return "n/a";
-      if (mode === "normalized") return value.toFixed(2);
-      return Math.round(value).toString();
+      return Math.round(value).toLocaleString();
     }
 
     function buildYearLines(theme) {
-      const color = theme === "dark" ? "#1e293b" : "#e2e8f0";
+      const color = getPlotTokens(theme).yearLine;
       return x
         .map((d) =>
           d.slice(5, 7) === "01" ? {
@@ -339,11 +488,11 @@
             stackgroup: "one",
             groupnorm: "percent",
             fill: "tonexty",
-            line: { color, width: 0.8 },
+            line: { color, width: 1 },
             fillcolor: color,
-            opacity: 0.85,
+            opacity: 0.78,
             customdata: y,
-            hovertemplate: "%{x|%Y-%m}<br>" + category + ": %{y:.1f}%<br>Comments: %{customdata}<extra></extra>",
+            hovertemplate: "%{x|%Y-%m}<br>" + category + ": %{y:.0f}%<br>Comments: %{customdata}<extra></extra>",
             name: category
           };
         })
@@ -355,105 +504,129 @@
       const y = isNorm ? yNorm : yRaw;
       const trend = computeMovingAverage(y, 12);
       const stats = computeStats(y);
-      const lineColor = theme === "dark" ? "#38bdf8" : "#2563eb";
-      const markerColor = theme === "dark" ? "#7dd3fc" : "#1d4ed8";
-      const trendColor = theme === "dark" ? "#c084fc" : "#7c3aed";
+      const tokens = getPlotTokens(theme);
+      const hoverValue = isNorm ? "%{y:.0f}" : "%{y:,}";
+      const trendValue = isNorm ? "%{y:.0f}" : "%{y:,.0f}";
       return [
         {
           x, y,
           type: "scatter",
           mode: "lines+markers",
-          line: { color: lineColor, width: 2 },
-          marker: { color: markerColor, size: 5 },
+          line: { color: tokens.line, width: 2.4 },
+          marker: {
+            color: tokens.marker,
+            size: 6,
+            line: { color: tokens.markerStroke, width: 1.4 }
+          },
           customdata: isNorm ? normCustom : hnTotals,
           hovertemplate: isNorm
-            ? "%{x|%Y-%m}<br>Comments/10k: %{y:.2f}<br>WIH comments: %{customdata[0]}<br>HN comments: %{customdata[1]}<extra></extra>"
-            : "%{x|%Y-%m}<br>Comments: %{y}<br>HN comments: %{customdata}<extra></extra>",
+            ? "%{x|%Y-%m}<br>Comments/10k: " + hoverValue + "<br>WIH comments: %{customdata[0]:,}<br>HN comments: %{customdata[1]:,}<extra></extra>"
+            : "%{x|%Y-%m}<br>Comments: " + hoverValue + "<br>HN comments: %{customdata:,}<extra></extra>",
           name: "Comments"
         },
         {
           x, y: trend,
           type: "scatter",
           mode: "lines",
-          line: { color: trendColor, width: 2, dash: "dash" },
-          hovertemplate: "%{x|%Y-%m}<br>Trend: %{y:.2f}<extra></extra>",
+          line: { color: tokens.trend, width: 2.2, dash: "solid" },
+          hovertemplate: "%{x|%Y-%m}<br>Trend: " + trendValue + "<extra></extra>",
           name: "12‑mo MA"
         },
         {
           x: stats.maxIdx >= 0 ? [x[stats.maxIdx]] : [],
           y: stats.maxIdx >= 0 ? [y[stats.maxIdx]] : [],
           type: "scatter",
-          mode: "markers+text",
-          marker: { color: "#22c55e", size: 9 },
-          text: stats.maxIdx >= 0 ? [`Max ${formatValue(y[stats.maxIdx], mode)}`] : [],
-          textposition: "top center",
+          mode: "markers",
+          marker: { color: "#16a34a", size: 9, line: { color: tokens.markerStroke, width: 1.5 } },
           name: "Max"
         },
         {
           x: stats.minIdx >= 0 ? [x[stats.minIdx]] : [],
           y: stats.minIdx >= 0 ? [y[stats.minIdx]] : [],
           type: "scatter",
-          mode: "markers+text",
-          marker: { color: "#ef4444", size: 9 },
-          text: stats.minIdx >= 0 ? [`Min ${formatValue(y[stats.minIdx], mode)}`] : [],
-          textposition: "bottom center",
+          mode: "markers",
+          marker: { color: "#dc2626", size: 9, line: { color: tokens.markerStroke, width: 1.5 } },
           name: "Min"
         },
         {
           x: stats.lastIdx >= 0 ? [x[stats.lastIdx]] : [],
           y: stats.lastIdx >= 0 ? [y[stats.lastIdx]] : [],
           type: "scatter",
-          mode: "markers+text",
-          marker: { color: "#f59e0b", size: 9 },
-          text: ["Latest"],
-          textposition: "top center",
+          mode: "markers",
+          marker: { color: "#ca8a04", size: 9, line: { color: tokens.markerStroke, width: 1.5 } },
           name: "Latest"
         }
       ];
     }
 
-    function buildCategoryLayout(theme, mode) {
+    function buildCategoryLayout(theme, mode, width) {
       const isNorm = mode === "normalized";
       const themeLayout = theme === "dark" ? darkTheme : lightTheme;
+      const tokens = getPlotTokens(theme);
       return {
         ...baseLayout,
         ...themeLayout,
-        yaxis: {
-          ...(baseLayout.yaxis || {}),
-          ...(themeLayout.yaxis || {}),
-          title: "Share of WIH comments (%)",
-          tickformat: ".1f",
-          range: [0, 100]
+        yaxis: buildYAxis(theme, "Share of WIH comments (%)", ",.0f", [0, 100]),
+        xaxis: buildXAxis(theme, width),
+        legend: {
+          orientation: "h",
+          x: 0,
+          y: 1.12,
+          xanchor: "left",
+          font: { color: tokens.muted, size: 11 }
         },
-        xaxis: {
-          ...(baseLayout.xaxis || {}),
-          ...(themeLayout.xaxis || {}),
-          showgrid: true
-        },
-        legend: { orientation: "h", y: 1.12 },
         hovermode: "x unified"
       };
     }
 
-    function buildLayout(theme, mode) {
+    function buildLayout(theme, mode, width) {
       const isNorm = mode === "normalized";
       const y = isNorm ? yNorm : yRaw;
       const stats = computeStats(y);
       const themeLayout = theme === "dark" ? darkTheme : lightTheme;
+      const tokens = getPlotTokens(theme);
+      const pointAnnotations = [];
+      if (stats.maxIdx >= 0) {
+        pointAnnotations.push({
+          x: x[stats.maxIdx],
+          y: y[stats.maxIdx],
+          text: `Max ${formatValue(y[stats.maxIdx], mode)}`,
+          showarrow: false,
+          yshift: 12,
+          font: { color: tokens.text, size: 12 }
+        });
+      }
+      if (stats.minIdx >= 0) {
+        pointAnnotations.push({
+          x: x[stats.minIdx],
+          y: y[stats.minIdx],
+          text: `Min ${formatValue(y[stats.minIdx], mode)}`,
+          showarrow: false,
+          yshift: -14,
+          font: { color: tokens.text, size: 12 }
+        });
+      }
+      if (stats.lastIdx >= 0) {
+        pointAnnotations.push({
+          x: x[stats.lastIdx],
+          y: y[stats.lastIdx],
+          text: "Latest",
+          showarrow: false,
+          xanchor: "right",
+          xshift: -8,
+          yshift: 10,
+          font: { color: tokens.text, size: 12 }
+        });
+      }
       return {
         ...baseLayout,
         ...themeLayout,
-        yaxis: {
-          ...(baseLayout.yaxis || {}),
-          ...(themeLayout.yaxis || {}),
-          title: isNorm ? "Comments per 10k HN comments" : "Comments",
-          tickformat: isNorm ? ".2f" : undefined
-        },
-        xaxis: {
-          ...(baseLayout.xaxis || {}),
-          ...(themeLayout.xaxis || {}),
-          showgrid: true
-        },
+        yaxis: buildYAxis(
+          theme,
+          isNorm ? "Comments per 10k HN comments" : "Comments",
+          isNorm ? ",.0f" : ",d"
+        ),
+        xaxis: buildXAxis(theme, width),
         shapes: [
           ...buildYearLines(theme),
           {
@@ -461,7 +634,7 @@
             xref: "paper",
             x0: 0, x1: 1,
             y0: stats.avg, y1: stats.avg,
-            line: { color: theme === "dark" ? "#64748b" : "#94a3b8", width: 1, dash: "dot" }
+            line: { color: tokens.axis, width: 1, dash: "dot" }
           }
         ],
         annotations: [
@@ -473,8 +646,11 @@
             y: stats.avg,
             text: `Avg ${formatValue(stats.avg, mode)}`,
             showarrow: false,
-            font: { color: theme === "dark" ? "#cbd5f5" : "#475569", size: 12 }
-          }
+            font: { color: tokens.muted, size: 12 },
+            xanchor: "right",
+            xshift: -6
+          },
+          ...pointAnnotations
         ]
       };
     }
@@ -487,27 +663,31 @@
       const width = panel && panel.clientWidth ? panel.clientWidth : fallbackW;
       return {
         height: Math.max(320, height - 16),
-        width: Math.max(640, width - 16)
+        width: Math.max(320, width - 16)
       };
     }
 
     function renderCharts(theme) {
-      const mainLayout = buildLayout(theme, currentMode);
       const mainSize = getPanelSize("mainPanel");
+      const mainLayout = buildLayout(theme, currentMode, mainSize.width);
       mainLayout.height = mainSize.height;
       mainLayout.width = mainSize.width;
-      Plotly.react("chart", buildTraces(theme, currentMode), mainLayout, {
+      const plotConfig = {
+        displayModeBar: "hover",
         displaylogo: false,
+        modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
         responsive: true
+      };
+      Plotly.react("chart", buildTraces(theme, currentMode), mainLayout, {
+        ...plotConfig
       });
 
-      const categoryLayout = buildCategoryLayout(theme, currentMode);
       const categorySize = getPanelSize("categoryPanel");
+      const categoryLayout = buildCategoryLayout(theme, currentMode, categorySize.width);
       categoryLayout.height = categorySize.height;
       categoryLayout.width = categorySize.width;
       Plotly.react("categoryChart", buildCategoryTraces(currentMode), categoryLayout, {
-        displaylogo: false,
-        responsive: true
+        ...plotConfig
       });
     }
 
