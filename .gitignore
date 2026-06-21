@@ -1,0 +1,8 @@
+data/who_is_hiring_algolia_cache.json
+out/
+__pycache__/
+*.pyc
+.DS_Store
+hn_who_is_hiring_hits.json
+btc_klines.json
+dec_2025_wih_crypto_web3_comments.csv

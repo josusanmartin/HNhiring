@@ -1,0 +1,39 @@
+{
+  "fetched_at": "2026-02-02T00:00:00+00:00",
+  "endpoint": "https://hn.algolia.com/api/v1/search_by_date",
+  "query": "\"Ask HN: Who is hiring?\"",
+  "author": "whoishiring",
+  "hits": [
+    {
+      "created_at": "2026-02-01T12:00:00.000Z",
+      "created_at_i": 1769956800,
+      "title": "Ask HN: Who is hiring? (February 2026)",
+      "url": "https://news.ycombinator.com/item?id=99999999",
+      "author": "whoishiring",
+      "points": 250,
+      "num_comments": 4200,
+      "objectID": "99999999"
+    },
+    {
+      "created_at": "2026-01-01T12:00:00.000Z",
+      "created_at_i": 1767278400,
+      "title": "Ask HN: Who is hiring? (January 2026)",
+      "url": "https://news.ycombinator.com/item?id=99999998",
+      "author": "whoishiring",
+      "points": 240,
+      "num_comments": 4100,
+      "objectID": "99999998"
+    },
+    {
+      "created_at": "2025-12-01T12:00:00.000Z",
+      "created_at_i": 1764600000,
+      "title": "Ask HN: Who is hiring? (December 2025)",
+      "url": "https://news.ycombinator.com/item?id=99999997",
+      "author": "whoishiring",
+      "points": 230,
+      "num_comments": 4000,
+      "objectID": "99999997"
+    }
+  ]
+}
+
