@@ -51,6 +51,7 @@ def fetch_page(
     hits_per_page: int,
     timeout: int,
     ssl_context: Optional[ssl.SSLContext],
+    numeric_filters: Optional[str] = None,
 ) -> Dict[str, Any]:
     params = {
         "query": query,
@@ -58,6 +59,8 @@ def fetch_page(
         "page": page,
         "hitsPerPage": hits_per_page,
     }
+    if numeric_filters:
+        params["numericFilters"] = numeric_filters
     url = f"{API_URL}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(
         url, headers={"User-Agent": "hn-who-is-hiring-chart/1.0"}
@@ -73,6 +76,7 @@ def fetch_all(
     timeout: int,
     ssl_context: Optional[ssl.SSLContext],
     max_pages: Optional[int] = None,
+    numeric_filters: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     page = 0
     hits: List[Dict[str, Any]] = []
@@ -84,6 +88,7 @@ def fetch_all(
             hits_per_page=hits_per_page,
             timeout=timeout,
             ssl_context=ssl_context,
+            numeric_filters=numeric_filters,
         )
         hits.extend(data.get("hits", []))
         if nb_pages is None:
@@ -93,6 +98,44 @@ def fetch_all(
             break
         if nb_pages is not None and page >= nb_pages:
             break
+        time.sleep(delay_s)
+    return hits
+
+
+def year_bounds(year: int) -> tuple[int, int]:
+    start_dt = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_dt = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    return int(start_dt.timestamp()), int(end_dt.timestamp())
+
+
+def fetch_all_by_year(
+    query: str,
+    hits_per_page: int,
+    delay_s: float,
+    timeout: int,
+    ssl_context: Optional[ssl.SSLContext],
+    start_year: int,
+    end_year: int,
+) -> List[Dict[str, Any]]:
+    hits: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for year in range(end_year, start_year - 1, -1):
+        start_ts, end_ts = year_bounds(year)
+        year_hits = fetch_all(
+            query=query,
+            hits_per_page=hits_per_page,
+            delay_s=delay_s,
+            timeout=timeout,
+            ssl_context=ssl_context,
+            numeric_filters=f"created_at_i>={start_ts},created_at_i<{end_ts}",
+        )
+        for hit in year_hits:
+            object_id = str(hit.get("objectID") or hit.get("object_id") or "")
+            if object_id and object_id in seen_ids:
+                continue
+            if object_id:
+                seen_ids.add(object_id)
+            hits.append(hit)
         time.sleep(delay_s)
     return hits
 
@@ -358,7 +401,7 @@ def pick_monthly_posts(hits: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def write_csv(rows: List[Dict[str, Any]], path: str) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(
             [
                 "month",
@@ -393,7 +436,7 @@ def write_category_csv(
 ) -> None:
     field = "categories_per_10k" if normalized else "categories"
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["month", "category", "value"])
         for r in rows:
             categories = r.get(field) or {}
@@ -1112,10 +1155,12 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
       }});
     }}
 
+    const themeStorageKey = "hnHiringThemeV2";
+
     function applyTheme(theme) {{
       document.body.dataset.theme = theme;
       renderCharts(theme);
-      localStorage.setItem("hnHiringTheme", theme);
+      localStorage.setItem(themeStorageKey, theme);
     }}
 
     function showTab(tab) {{
@@ -1135,9 +1180,8 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
       renderCharts(document.body.dataset.theme || initialTheme);
     }}
 
-    const storedTheme = localStorage.getItem("hnHiringTheme");
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = storedTheme || (prefersDark ? "dark" : "light");
+    const storedTheme = localStorage.getItem(themeStorageKey);
+    const initialTheme = storedTheme === "dark" || storedTheme === "light" ? storedTheme : "light";
     const storedMode = localStorage.getItem("hnHiringMode");
     let currentMode = storedMode || "raw";
     const modeButton = document.getElementById("modeToggle");
@@ -1208,6 +1252,27 @@ def main() -> None:
     parser.add_argument("--cache", default="hn_who_is_hiring_hits.json")
     parser.add_argument("--refresh", action="store_true")
     parser.add_argument(
+        "--refresh-hits",
+        action="store_true",
+        help="Refresh the HN story search cache while reusing derived caches.",
+    )
+    parser.add_argument(
+        "--refresh-latest-month",
+        action="store_true",
+        help="Refresh derived counts for the newest selected month while reusing older derived caches.",
+    )
+    parser.add_argument(
+        "--start-year",
+        type=int,
+        default=2013,
+        help="First year to fetch when refreshing the HN story search cache.",
+    )
+    parser.add_argument(
+        "--no-year-windows",
+        action="store_true",
+        help="Disable year-windowed story fetching during cache refresh.",
+    )
+    parser.add_argument(
         "--no-normalize",
         action="store_true",
         help="Skip normalization by total HN comment volume.",
@@ -1252,19 +1317,31 @@ def main() -> None:
         print("Warning: SSL verification is disabled (--insecure).")
     else:
         ssl_context = ssl.create_default_context()
-    if args.cache and os.path.exists(args.cache) and not args.refresh:
+    refresh_hits = args.refresh or args.refresh_hits
+    if args.cache and os.path.exists(args.cache) and not refresh_hits:
         with open(args.cache, "r", encoding="utf-8") as f:
             hits = json.load(f)
         print(f"Loaded {len(hits)} hits from cache {args.cache}")
     else:
-        hits = fetch_all(
-            query=args.query,
-            hits_per_page=args.hits_per_page,
-            delay_s=args.delay,
-            timeout=args.timeout,
-            ssl_context=ssl_context,
-            max_pages=args.max_pages,
-        )
+        if args.max_pages is None and not args.no_year_windows:
+            hits = fetch_all_by_year(
+                query=args.query,
+                hits_per_page=args.hits_per_page,
+                delay_s=args.delay,
+                timeout=args.timeout,
+                ssl_context=ssl_context,
+                start_year=args.start_year,
+                end_year=datetime.now(timezone.utc).year,
+            )
+        else:
+            hits = fetch_all(
+                query=args.query,
+                hits_per_page=args.hits_per_page,
+                delay_s=args.delay,
+                timeout=args.timeout,
+                ssl_context=ssl_context,
+                max_pages=args.max_pages,
+            )
         if args.cache:
             with open(args.cache, "w", encoding="utf-8") as f:
                 json.dump(hits, f)
@@ -1282,6 +1359,8 @@ def main() -> None:
             with open(args.hn_comments_cache, "r", encoding="utf-8") as f:
                 hn_counts = json.load(f)
             print(f"Loaded HN monthly comment totals from {args.hn_comments_cache}")
+        if args.refresh_latest_month and months:
+            hn_counts.pop(months[-1], None)
         missing = [m for m in months if m not in hn_counts]
         if missing:
             for month in missing:
@@ -1318,9 +1397,16 @@ def main() -> None:
             else:
                 category_cache_changed = normalize_category_cache(category_cache)
         rules = compile_category_rules()
+        refresh_category_story_ids = (
+            {str(rows[-1]["object_id"])} if args.refresh_latest_month and rows else set()
+        )
         for r in rows:
             story_id = str(r["object_id"])
-            if story_id in category_cache and not args.refresh:
+            if (
+                story_id in category_cache
+                and not args.refresh
+                and story_id not in refresh_category_story_ids
+            ):
                 counts = normalize_category_counts(category_cache[story_id]["counts"])
                 if counts != category_cache[story_id]["counts"]:
                     category_cache[story_id]["counts"] = counts
