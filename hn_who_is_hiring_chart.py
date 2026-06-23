@@ -1175,8 +1175,13 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
 """
 
 
-def write_html(rows: List[Dict[str, Any]], path: str) -> None:
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+def write_html(
+    rows: List[Dict[str, Any]],
+    path: str,
+    generated_at: Optional[str] = None,
+) -> None:
+    if generated_at is None:
+        generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     html = build_html(rows, generated_at)
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
@@ -1228,6 +1233,11 @@ def main() -> None:
     parser.add_argument("--out-csv", default="who_is_hiring_comments.csv")
     parser.add_argument("--out-category-csv", default="wih_category_counts.csv")
     parser.add_argument("--out-html", default="who_is_hiring_chart.html")
+    parser.add_argument(
+        "--out-index",
+        default="index.html",
+        help="Optional GitHub Pages entrypoint HTML path.",
+    )
     parser.add_argument(
         "--exclude-latest",
         action="store_true",
@@ -1362,8 +1372,13 @@ def main() -> None:
     if rows and not args.no_categories:
         write_category_csv(rows, args.out_category_csv, normalized=False)
         write_category_csv(rows, args.out_category_csv.replace(".csv", "_per_10k.csv"), normalized=True)
-    write_html(rows, args.out_html)
-    print(f"Wrote {len(rows)} months to {args.out_csv} and {args.out_html}")
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    write_html(rows, args.out_html, generated_at=generated_at)
+    written_html = [args.out_html]
+    if args.out_index and os.path.abspath(args.out_index) != os.path.abspath(args.out_html):
+        write_html(rows, args.out_index, generated_at=generated_at)
+        written_html.append(args.out_index)
+    print(f"Wrote {len(rows)} months to {args.out_csv} and {', '.join(written_html)}")
     if duplicates:
         print(f"Skipped {len(duplicates)} duplicate month posts (kept highest comment count).")
 
