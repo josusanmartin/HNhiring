@@ -735,14 +735,14 @@ def build_html(rows: List[Dict[str, Any]], generated_at: str) -> str:
   </div>
   <details class="methodology" open>
     <summary>Methodology & definitions</summary>
-    <p><strong>WIH comments</strong> are the comment counts on the monthly “Ask HN: Who is hiring?” post.</p>
-    <p><strong>HN comments</strong> are all comments across Hacker News in that month (any post), estimated via the HN Algolia Search API.</p>
+    <p><strong>WIH comments</strong> are the public/API-visible comment counts on the monthly “Ask HN: Who is hiring?” post, fetched from the HN Algolia Search API. Dead comments are excluded, so logged-in HN users with <code>showdead</code> enabled may see higher counts on Hacker News.</p>
+    <p><strong>HN comments</strong> are all public/API-visible comments across Hacker News in that month (any post), estimated via the HN Algolia Search API.</p>
     <p><strong>Normalize</strong> means: <em>WIH comments ÷ total HN comments</em>, shown as “comments per 10k HN comments” to make month‑to‑month comparisons fairer.</p>
-    <p><strong>Categories</strong> are assigned by keyword matching on each job comment. Each comment is assigned to the first matching bucket, otherwise “Other.”</p>
+    <p><strong>Categories</strong> are assigned by keyword matching on top-level job comments only. Each job comment is assigned to the first matching bucket, otherwise “Other.”</p>
     <p><strong>Other</strong> includes comments that do not match a named category, including cryptography-specific terms.</p>
     <ul>
       <li>We select one “Who is hiring?” post per month (highest comment count if duplicates).</li>
-      <li>We drop the first and last months to avoid partial months.</li>
+      <li>We drop the first matching month from 2013 to avoid a partial historical boundary. The latest month is included, so it may be partial until month end.</li>
       <li>Monthly HN comment totals are computed by summing 2‑day buckets, and falling back to 1‑day buckets when Algolia marks a result as non‑exhaustive.</li>
       <li>The smoothing line is a 12‑month moving average over the selected series (raw or normalized).</li>
       <li>The category chart is a 100% stacked area (each month sums to 100%).</li>
